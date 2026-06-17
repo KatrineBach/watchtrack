@@ -43,6 +43,17 @@ if page == 'Inventory':
                 'Location':  w.location,
                 'Partner':   w.purchased_by,
             })
+            # Add these lines before the dataframe display:
+            col_s, col_f = st.columns([3, 1])
+            search = col_s.text_input('Search model', placeholder='Daytona...')
+            status_filter = col_f.selectbox('Status', ['All', 'in_stock', 'reserved', 'sold', 'consignment']
+                                            )
+            # Filter the list before building the DataFrame:
+            filtered = watches
+            if search:
+                filtered = [w for w in filtered if search.lower() in (w.model or '').lower()]
+            if status_filter != 'All':
+                filtered = [w for w in filtered if w.status and w.status.value == status_filter]
         st.dataframe(pd.DataFrame(data), use_container_width=True)
         st.caption(f'{len(watches)} watches in database')
     else:
@@ -90,7 +101,17 @@ elif page == 'Add Watch':
 # nn STATS (placeholder for Session 8) nnnnnnnnnnnnnnnnnnnnn
 elif page == 'Stats':
     st.subheader('Statistics')
-    st.info('Coming in Session 8!')
+    db = SessionLocal()
+    watches = db.query(Watch).all()
+    db.close()
+    in_stock = [w for w in watches if w.status and w.status.value == 'in_stock']
+    sold     = [w for w in watches if w.status and w.status.value == 'sold']
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric('Total Watches',    len(watches))
+    col2.metric('In Stock',         len(in_stock))
+    col3.metric('Sold',             len(sold))
+    total_invested = sum(w.purchase_price or 0 for w in in_stock)
+    col4.metric('Capital in Stock', f'€{total_invested:,.0f}')
 
 # Then add the detail page handler:
 elif page == 'Watch Detail':
