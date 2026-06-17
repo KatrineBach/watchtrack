@@ -14,16 +14,16 @@ st.set_page_config(
     layout='wide'  # use the full browser width
 )
 
-st.title('n WatchTrack')
+st.title('WatchTrack')
 st.caption('Grey market watch inventory — internal use only')
 # Sidebar navigation
 page = st.sidebar.selectbox(
     'Navigate',
-    ['n Inventory', 'n Add Watch', 'n Stats']
+    ['Inventory', 'Add Watch', 'Stats']
 )
 
 # nn INVENTORY PAGE nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
-if page == 'n Inventory':
+if page == 'Inventory':
     st.subheader('Current Stock')
     db = SessionLocal()
     watches = db.query(Watch).all()
@@ -47,11 +47,47 @@ if page == 'n Inventory':
         st.caption(f'{len(watches)} watches in database')
     else:
         st.info('No watches yet. Use n Add Watch in the sidebar.')
-# nn ADD WATCH (placeholder for Session 6) nnnnnnnnnnnnnnnn
-elif page == 'n Add Watch':
-    st.subheader('Add a Watch')
-    st.info('Coming in Session 6!')
+
+elif page == 'Add Watch':
+    st.subheader('Add a New Watch')
+    with st.form('add_watch_form', clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown('**Watch Details**')
+            model     = st.text_input('Brand & Model *', placeholder='Rolex Daytona')
+            reference = st.text_input('Reference',       placeholder='116500LN')
+            serial    = st.text_input('Serial Number',   placeholder='X123456Y')
+            condition = st.selectbox('Condition', ['very_good','like_new','new','good','fair'])
+            source    = st.text_input('Bought from',     placeholder='Dealer in Hamburg')
+        with col2:
+            st.markdown('**Price & Location**')
+            buy_price = st.number_input('Purchase Price (EUR)', min_value=0.0, step=100.0)
+            target    = st.number_input('Target Price (EUR)',   min_value=0.0, step=100.0)
+            location  = st.text_input('Who has it?',           placeholder='Karl')
+            partner   = st.text_input('Bought by',             placeholder='Partner 1')
+            status    = st.selectbox('Status', ['in_stock','reserved','consignment'])
+        notes     = st.text_area('Notes (optional)')
+        submitted = st.form_submit_button('Save Watch', use_container_width=True)
+    # Handle submission OUTSIDE the form block
+    if submitted:
+        if not model:
+            st.error('Model is required.')
+        else:
+            db = SessionLocal()
+            w = Watch(
+                model=model, reference=reference, serial=serial,
+                purchase_price=buy_price, target_price=target,
+                location=location, purchased_by=partner,
+                purchased_from=source, notes=notes,
+                status=status, condition=condition,
+            )
+            db.add(w)
+            db.commit()
+            db.close()
+            st.success(f'Saved: {model} {reference or ""}')
+            st.balloons()  # a little celebration never hurt anyone
+
 # nn STATS (placeholder for Session 8) nnnnnnnnnnnnnnnnnnnnn
-elif page == 'n Stats':
+elif page == 'Stats':
     st.subheader('Statistics')
     st.info('Coming in Session 8!')
