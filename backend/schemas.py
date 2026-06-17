@@ -26,3 +26,10 @@ class WatchRead(WatchCreate):
 
     model_config = ConfigDict(from_attributes=True)  # lets Pydantic read SQLAlchemy objects
 
+class PhotoRead(BaseModel):
+    id:           int
+    watch_id:     int
+    file_path:    Optional[str] = None
+    photo_type:   Optional[str] = None
+    created_at:   Optional[datetime] = None
+    model_config = ConfigDict(from_attributes=True)
