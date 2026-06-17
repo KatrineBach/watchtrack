@@ -19,7 +19,7 @@ st.caption('Grey market watch inventory — internal use only')
 # Sidebar navigation
 page = st.sidebar.selectbox(
     'Navigate',
-    ['Inventory', 'Add Watch', 'Stats']
+    ['Inventory', 'Add Watch', 'Stats', 'Watch Detail']
 )
 
 # nn INVENTORY PAGE nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
@@ -91,3 +91,52 @@ elif page == 'Add Watch':
 elif page == 'Stats':
     st.subheader('Statistics')
     st.info('Coming in Session 8!')
+
+# Then add the detail page handler:
+elif page == 'Watch Detail':
+    st.subheader('Watch Detail')
+    db = SessionLocal()
+    watches = db.query(Watch).all()
+    if not watches:
+        st.info('No watches yet.')
+    else:
+        # Let the user pick a watch by its model + reference
+        options = {f'{w.model} {w.reference or ""} (ID {w.id})': w.id for w in watches}
+        choice  = st.selectbox('Select a watch', list(options.keys()))
+        watch   = db.query(Watch).get(options[choice])
+        if watch:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown(f'**Model:** {watch.model}')
+                st.markdown(f'**Reference:** {watch.reference or "-"}')
+                st.markdown(f'**Serial:** {watch.serial or "-"}')
+                st.markdown(f'**Condition:** {watch.condition.value if watch.condition else "-"}')
+            with col2:
+                st.markdown(f'**Purchase Price:** €{watch.purchase_price or 0:,.0f}')
+                st.markdown(f'**Target Price:** €{watch.target_price or 0:,.0f}')
+                st.markdown(f'**Location:** {watch.location or "-"}')
+                st.markdown(f'**Status:** {watch.status.value if watch.status else "-"}')
+            # Photo gallery
+            st.divider()
+            st.markdown('**Photos**')
+            from backend.storage import get_photos, save_photo
+            from backend.models import Photo
+            photos = get_photos(watch.id)
+            if photos:
+                cols = st.columns(min(len(photos), 3))
+                for i, p in enumerate(photos):
+                    cols[i % 3].image(str(p), use_container_width=True)
+            else:
+                st.caption('No photos yet.')
+            # Upload new photos
+            uploaded = st.file_uploader('Upload photos', type=['jpg','jpeg','png'],
+                                        accept_multiple_files=True)
+            if uploaded:
+                for f in uploaded:
+                    path = save_photo(watch.id, f)
+                    photo = Photo(watch_id=watch.id, file_path=path)
+                    db.add(photo)
+                db.commit()
+                st.success(f'Uploaded {len(uploaded)} photo(s).')
+                st.rerun()  # refresh so photos appear immediately
+    db.close()
